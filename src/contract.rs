@@ -893,7 +893,6 @@ fn is_valid_symbol(symbol: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::InitConfig;
     use crate::msg::ResponseStatus;
     use cosmwasm_std::testing::*;
     use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
@@ -914,7 +913,6 @@ mod tests {
             symbol: "SECSEC".to_string(),
             decimals: 8,
             prng_seed: Binary::from("lolz fun yay".as_bytes()),
-            config: None,
         };
 
         (init(&mut deps, env, init_msg), deps)
@@ -2060,10 +2058,6 @@ mod tests {
         let init_admin = HumanAddr("admin".to_string());
         let init_symbol = "SECSEC".to_string();
         let init_decimals = 8;
-        let init_config: InitConfig = from_binary(&Binary::from(
-            r#"{ "public_total_supply": true }"#.as_bytes(),
-        ))
-        .unwrap();
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
         let init_msg = InitMsg {
@@ -2072,7 +2066,6 @@ mod tests {
             symbol: init_symbol.clone(),
             decimals: init_decimals.clone(),
             prng_seed: Binary::from("lolz fun yay".as_bytes()),
-            config: Some(init_config),
         };
         let init_result = init(&mut deps, env, init_msg);
         assert!(
