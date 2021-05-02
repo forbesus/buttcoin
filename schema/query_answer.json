@@ -44,29 +44,6 @@
     {
       "type": "object",
       "required": [
-        "exchange_rate"
-      ],
-      "properties": {
-        "exchange_rate": {
-          "type": "object",
-          "required": [
-            "denom",
-            "rate"
-          ],
-          "properties": {
-            "denom": {
-              "type": "string"
-            },
-            "rate": {
-              "$ref": "#/definitions/Uint128"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
         "allowance"
       ],
       "properties": {

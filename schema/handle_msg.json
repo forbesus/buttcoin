@@ -381,62 +381,6 @@
     {
       "type": "object",
       "required": [
-        "add_minters"
-      ],
-      "properties": {
-        "add_minters": {
-          "type": "object",
-          "required": [
-            "minters"
-          ],
-          "properties": {
-            "minters": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/HumanAddr"
-              }
-            },
-            "padding": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "remove_minters"
-      ],
-      "properties": {
-        "remove_minters": {
-          "type": "object",
-          "required": [
-            "minters"
-          ],
-          "properties": {
-            "minters": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/HumanAddr"
-              }
-            },
-            "padding": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
         "set_minters"
       ],
       "properties": {
@@ -486,45 +430,12 @@
           }
         }
       }
-    },
-    {
-      "type": "object",
-      "required": [
-        "set_contract_status"
-      ],
-      "properties": {
-        "set_contract_status": {
-          "type": "object",
-          "required": [
-            "level"
-          ],
-          "properties": {
-            "level": {
-              "$ref": "#/definitions/ContractStatusLevel"
-            },
-            "padding": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      }
     }
   ],
   "definitions": {
     "Binary": {
       "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
       "type": "string"
-    },
-    "ContractStatusLevel": {
-      "type": "string",
-      "enum": [
-        "normal_run",
-        "stop_all_but_redeems",
-        "stop_all"
-      ]
     },
     "HumanAddr": {
       "type": "string"
