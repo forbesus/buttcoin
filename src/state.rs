@@ -156,8 +156,6 @@ pub struct Constants {
     pub symbol: String,
     pub decimals: u8,
     pub prng_seed: Vec<u8>,
-    // privacy configuration
-    pub total_supply_is_public: bool,
 }
 
 pub struct ReadonlyConfig<'a, S: ReadonlyStorage> {

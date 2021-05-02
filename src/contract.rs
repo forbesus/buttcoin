@@ -25,7 +25,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    let init_config = msg.config();
     let mut total_supply: u128 = 0;
     {
         let mut balances = Balances::from_storage(&mut deps.storage);
@@ -70,7 +69,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         decimals: msg.decimals,
         admin: admin.clone(),
         prng_seed: prng_seed_hashed.to_vec(),
-        total_supply_is_public: init_config.public_total_supply(),
     })?;
     config.set_total_supply(total_supply);
     config.set_minters(Vec::from([admin]))?;
@@ -201,12 +199,7 @@ pub fn authenticated_queries<S: Storage, A: Api, Q: Querier>(
 fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
     let config = ReadonlyConfig::from_storage(storage);
     let constants = config.constants()?;
-
-    let total_supply = if constants.total_supply_is_public {
-        Some(Uint128(config.total_supply()))
-    } else {
-        None
-    };
+    let total_supply = Some(Uint128(config.total_supply()));
 
     to_binary(&QueryAnswer::TokenInfo {
         name: constants.name,
@@ -1008,7 +1001,6 @@ mod tests {
             constants.prng_seed,
             sha_256("lolz fun yay".to_owned().as_bytes())
         );
-        assert_eq!(constants.total_supply_is_public, false);
     }
 
     #[test]
