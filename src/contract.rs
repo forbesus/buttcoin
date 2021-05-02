@@ -6,8 +6,7 @@ use cosmwasm_std::{
 };
 
 use crate::msg::{
-    space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
-    ResponseStatus::Success,
+    space_pad, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg, ResponseStatus::Success,
 };
 use crate::rand::sha_256;
 use crate::receiver::Snip20ReceiveMsg;
@@ -74,7 +73,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         total_supply_is_public: init_config.public_total_supply(),
     })?;
     config.set_total_supply(total_supply);
-    config.set_contract_status(ContractStatusLevel::NormalRun);
     config.set_minters(Vec::from([admin]))?;
 
     Ok(InitResponse::default())
@@ -95,21 +93,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
-
-    match contract_status {
-        ContractStatusLevel::StopAll | ContractStatusLevel::StopAllButRedeems => {
-            let response = match msg {
-                HandleMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
-                _ => Err(StdError::generic_err(
-                    "This contract is stopped and this action is not allowed",
-                )),
-            };
-            return pad_response(response);
-        }
-        ContractStatusLevel::NormalRun => {} // If it's a normal run just continue
-    }
-
     let response = match msg {
         // Base
         HandleMsg::Transfer {
@@ -161,7 +144,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
         // Other
         HandleMsg::ChangeAdmin { address, .. } => change_admin(deps, env, address),
-        HandleMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
         HandleMsg::AddMinters { minters, .. } => add_minters(deps, env, minters),
         HandleMsg::RemoveMinters { minters, .. } => remove_minters(deps, env, minters),
         HandleMsg::SetMinters { minters, .. } => set_minters(deps, env, minters),
@@ -375,26 +357,6 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::CreateViewingKey { key })?),
-    })
-}
-
-fn set_contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    status_level: ContractStatusLevel,
-) -> StdResult<HandleResponse> {
-    let mut config = Config::from_storage(&mut deps.storage);
-
-    check_if_admin(&config, &env.message.sender)?;
-
-    config.set_contract_status(status_level);
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetContractStatus {
-            status: Success,
-        })?),
     })
 }
 
@@ -1016,7 +978,6 @@ mod tests {
             | HandleAnswer::BurnFrom { status }
             | HandleAnswer::Mint { status }
             | HandleAnswer::ChangeAdmin { status }
-            | HandleAnswer::SetContractStatus { status }
             | HandleAnswer::SetMinters { status }
             | HandleAnswer::AddMinters { status }
             | HandleAnswer::RemoveMinters { status } => {
@@ -1039,7 +1000,6 @@ mod tests {
         let config = ReadonlyConfig::from_storage(&deps.storage);
         let constants = config.constants().unwrap();
         assert_eq!(config.total_supply(), 5000);
-        assert_eq!(config.contract_status(), ContractStatusLevel::NormalRun);
         assert_eq!(constants.name, "sec-sec".to_string());
         assert_eq!(constants.admin, HumanAddr("admin".to_string()));
         assert_eq!(constants.symbol, "SECSEC".to_string());
@@ -1764,36 +1724,6 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_set_contract_status() {
-        let (init_result, mut deps) = init_helper(vec![InitialBalance {
-            address: HumanAddr("admin".to_string()),
-            amount: Uint128(5000),
-        }]);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let handle_msg = HandleMsg::SetContractStatus {
-            level: ContractStatusLevel::StopAll,
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "handle() failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
-        assert!(matches!(
-            contract_status,
-            ContractStatusLevel::StopAll { .. }
-        ));
-    }
-
-    #[test]
     fn test_handle_burn() {
         let initial_amount: u128 = 5000;
         let (init_result, mut deps) = init_helper(vec![InitialBalance {
@@ -1868,14 +1798,6 @@ mod tests {
             init_result.err().unwrap()
         );
 
-        let pause_msg = HandleMsg::SetContractStatus {
-            level: ContractStatusLevel::StopAllButRedeems,
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), pause_msg);
-        let error = extract_error_msg(handle_result);
-        assert!(error.contains(&admin_err.clone()));
-
         let mint_msg = HandleMsg::AddMinters {
             minters: vec![HumanAddr("not_admin".to_string())],
             padding: None,
@@ -1907,80 +1829,6 @@ mod tests {
         let handle_result = handle(&mut deps, mock_env("not_admin", &[]), change_admin_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains(&admin_err.clone()));
-    }
-
-    #[test]
-    fn test_handle_pause_with_withdrawals() {
-        let (init_result, mut deps) = init_helper(vec![InitialBalance {
-            address: HumanAddr("lebron".to_string()),
-            amount: Uint128(5000),
-        }]);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let pause_msg = HandleMsg::SetContractStatus {
-            level: ContractStatusLevel::StopAllButRedeems,
-            padding: None,
-        };
-
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
-        assert!(
-            handle_result.is_ok(),
-            "Pause handle failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let send_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("account".to_string()),
-            amount: Uint128(123),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), send_msg);
-        let error = extract_error_msg(handle_result);
-        assert_eq!(
-            error,
-            "This contract is stopped and this action is not allowed".to_string()
-        );
-    }
-
-    #[test]
-    fn test_handle_pause_all() {
-        let (init_result, mut deps) = init_helper(vec![InitialBalance {
-            address: HumanAddr("lebron".to_string()),
-            amount: Uint128(5000),
-        }]);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let pause_msg = HandleMsg::SetContractStatus {
-            level: ContractStatusLevel::StopAll,
-            padding: None,
-        };
-
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
-        assert!(
-            handle_result.is_ok(),
-            "Pause handle failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let send_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("account".to_string()),
-            amount: Uint128(123),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), send_msg);
-        let error = extract_error_msg(handle_result);
-        assert_eq!(
-            error,
-            "This contract is stopped and this action is not allowed".to_string()
-        );
     }
 
     #[test]

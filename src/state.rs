@@ -11,7 +11,6 @@ use secret_toolkit::storage::{AppendStore, AppendStoreMut, TypedStore, TypedStor
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel};
 use crate::viewing_key::ViewingKey;
 use serde::de::DeserializeOwned;
 
@@ -20,7 +19,6 @@ pub const PREFIX_TXS: &[u8] = b"transfers";
 
 pub const KEY_CONSTANTS: &[u8] = b"constants";
 pub const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
-pub const KEY_CONTRACT_STATUS: &[u8] = b"contract_status";
 pub const KEY_MINTERS: &[u8] = b"minters";
 pub const KEY_TX_COUNT: &[u8] = b"tx-count";
 
@@ -185,10 +183,6 @@ impl<'a, S: ReadonlyStorage> ReadonlyConfig<'a, S> {
         self.as_readonly().total_supply()
     }
 
-    pub fn contract_status(&self) -> ContractStatusLevel {
-        self.as_readonly().contract_status()
-    }
-
     pub fn minters(&self) -> Vec<HumanAddr> {
         self.as_readonly().minters()
     }
@@ -245,16 +239,6 @@ impl<'a, S: Storage> Config<'a, S> {
 
     pub fn set_total_supply(&mut self, supply: u128) {
         self.storage.set(KEY_TOTAL_SUPPLY, &supply.to_be_bytes());
-    }
-
-    pub fn contract_status(&self) -> ContractStatusLevel {
-        self.as_readonly().contract_status()
-    }
-
-    pub fn set_contract_status(&mut self, status: ContractStatusLevel) {
-        let status_u8 = status_level_to_u8(status);
-        self.storage
-            .set(KEY_CONTRACT_STATUS, &status_u8.to_be_bytes());
     }
 
     pub fn set_minters(&mut self, minters_to_set: Vec<HumanAddr>) -> StdResult<()> {
@@ -315,17 +299,6 @@ impl<'a, S: ReadonlyStorage> ReadonlyConfigImpl<'a, S> {
             .expect("no total supply stored in config");
         // This unwrap is ok because we know we stored things correctly
         slice_to_u128(&supply_bytes).unwrap()
-    }
-
-    fn contract_status(&self) -> ContractStatusLevel {
-        let supply_bytes = self
-            .0
-            .get(KEY_CONTRACT_STATUS)
-            .expect("no contract status stored in config");
-
-        // These unwraps are ok because we know we stored things correctly
-        let status = slice_to_u8(&supply_bytes).unwrap();
-        u8_to_status_level(status).unwrap()
     }
 
     fn minters(&self) -> Vec<HumanAddr> {
@@ -475,17 +448,5 @@ fn slice_to_u128(data: &[u8]) -> StdResult<u128> {
         Err(_) => Err(StdError::generic_err(
             "Corrupted data found. 16 byte expected.",
         )),
-    }
-}
-
-/// Converts 1 byte value into u8
-/// Errors if data found that is not 1 byte
-fn slice_to_u8(data: &[u8]) -> StdResult<u8> {
-    if data.len() == 1 {
-        Ok(data[0])
-    } else {
-        Err(StdError::generic_err(
-            "Corrupted data found. 1 byte expected.",
-        ))
     }
 }
