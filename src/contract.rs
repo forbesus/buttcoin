@@ -1,9 +1,8 @@
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use cosmwasm_std::{
-    log, to_binary, Api, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError,
-    StdResult, Storage, Uint128,
+    log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    InitResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
 };
 
 use crate::msg::{
@@ -102,11 +101,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         ContractStatusLevel::StopAll | ContractStatusLevel::StopAllButRedeems => {
             let response = match msg {
                 HandleMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
-                HandleMsg::Redeem { amount, .. }
-                    if contract_status == ContractStatusLevel::StopAllButRedeems =>
-                {
-                    try_redeem(deps, env, amount)
-                }
                 _ => Err(StdError::generic_err(
                     "This contract is stopped and this action is not allowed",
                 )),
@@ -117,10 +111,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     }
 
     let response = match msg {
-        // Native
-        HandleMsg::Deposit { .. } => try_deposit(deps, env),
-        HandleMsg::Redeem { amount, .. } => try_redeem(deps, env, amount),
-
         // Base
         HandleMsg::Transfer {
             recipient, amount, ..
@@ -435,103 +425,6 @@ pub fn try_check_allowance<S: Storage, A: Api, Q: Querier>(
         expiration: allowance.expiration,
     };
     to_binary(&response)
-}
-
-fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-) -> StdResult<HandleResponse> {
-    let mut amount = Uint128::zero();
-
-    for coin in &env.message.sent_funds {
-        if coin.denom == "uscrt" {
-            amount = coin.amount
-        }
-    }
-
-    if amount.is_zero() {
-        return Err(StdError::generic_err("No funds were sent to be deposited"));
-    }
-
-    let amount = amount.u128();
-
-    let sender_address = deps.api.canonical_address(&env.message.sender)?;
-
-    let mut balances = Balances::from_storage(&mut deps.storage);
-    let account_balance = balances.balance(&sender_address);
-    if let Some(account_balance) = account_balance.checked_add(amount) {
-        balances.set_account_balance(&sender_address, account_balance);
-    } else {
-        return Err(StdError::generic_err(
-            "This deposit would overflow your balance",
-        ));
-    }
-
-    let mut config = Config::from_storage(&mut deps.storage);
-    let total_supply = config.total_supply();
-    if let Some(total_supply) = total_supply.checked_add(amount) {
-        config.set_total_supply(total_supply);
-    } else {
-        return Err(StdError::generic_err(
-            "This deposit would overflow the currency's total supply",
-        ));
-    }
-
-    let res = HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Deposit { status: Success })?),
-    };
-
-    Ok(res)
-}
-
-fn try_redeem<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let sender_address = deps.api.canonical_address(&env.message.sender)?;
-    let amount_raw = amount.u128();
-
-    let mut balances = Balances::from_storage(&mut deps.storage);
-    let account_balance = balances.balance(&sender_address);
-
-    if let Some(account_balance) = account_balance.checked_sub(amount_raw) {
-        balances.set_account_balance(&sender_address, account_balance);
-    } else {
-        return Err(StdError::generic_err(format!(
-            "insufficient funds to redeem: balance={}, required={}",
-            account_balance, amount_raw
-        )));
-    }
-
-    let mut config = Config::from_storage(&mut deps.storage);
-    let total_supply = config.total_supply();
-    if let Some(total_supply) = total_supply.checked_sub(amount_raw) {
-        config.set_total_supply(total_supply);
-    } else {
-        return Err(StdError::generic_err(
-            "You are tyring to redeem more tokens than what is available in the total supply",
-        ));
-    }
-
-    let withdrawl_coins: Vec<Coin> = vec![Coin {
-        denom: "uscrt".to_string(),
-        amount,
-    }];
-
-    let res = HandleResponse {
-        messages: vec![CosmosMsg::Bank(BankMsg::Send {
-            from_address: env.contract.address,
-            to_address: env.message.sender,
-            amount: withdrawl_coins,
-        })],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Redeem { status: Success })?),
-    };
-
-    Ok(res)
 }
 
 fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
@@ -1101,31 +994,6 @@ mod tests {
         (init(&mut deps, env, init_msg), deps)
     }
 
-    /// Will return a ViewingKey only for the first account in `initial_balances`
-    fn auth_query_helper(
-        initial_balances: Vec<InitialBalance>,
-    ) -> (ViewingKey, Extern<MockStorage, MockApi, MockQuerier>) {
-        let (init_result, mut deps) = init_helper(initial_balances.clone());
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let account = initial_balances[0].address.clone();
-        let create_vk_msg = HandleMsg::CreateViewingKey {
-            entropy: "42".to_string(),
-            padding: None,
-        };
-        let handle_response = handle(&mut deps, mock_env(account.0, &[]), create_vk_msg).unwrap();
-        let vk = match from_binary(&handle_response.data.unwrap()).unwrap() {
-            HandleAnswer::CreateViewingKey { key } => key,
-            _ => panic!("Unexpected result from handle"),
-        };
-
-        (vk, deps)
-    }
-
     fn extract_error_msg<T: Any>(error: StdResult<T>) -> String {
         match error {
             Ok(response) => {
@@ -1148,9 +1016,7 @@ mod tests {
         let handle_result: HandleAnswer = from_binary(&handle_result.data.unwrap()).unwrap();
 
         match handle_result {
-            HandleAnswer::Deposit { status }
-            | HandleAnswer::Redeem { status }
-            | HandleAnswer::Transfer { status }
+            HandleAnswer::Transfer { status }
             | HandleAnswer::Send { status }
             | HandleAnswer::Burn { status }
             | HandleAnswer::RegisterReceive { status }
@@ -1938,76 +1804,6 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_redeem() {
-        let (init_result, mut deps) = init_helper(vec![InitialBalance {
-            address: HumanAddr("butler".to_string()),
-            amount: Uint128(5000),
-        }]);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let handle_msg = HandleMsg::Redeem {
-            amount: Uint128(1000),
-            denom: None,
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("butler", &[]), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "handle() failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let balances = ReadonlyBalances::from_storage(&deps.storage);
-        let canonical = deps
-            .api
-            .canonical_address(&HumanAddr("butler".to_string()))
-            .unwrap();
-        assert_eq!(balances.account_amount(&canonical), 4000)
-    }
-
-    #[test]
-    fn test_handle_deposit() {
-        let (init_result, mut deps) = init_helper(vec![InitialBalance {
-            address: HumanAddr("lebron".to_string()),
-            amount: Uint128(5000),
-        }]);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-
-        let handle_msg = HandleMsg::Deposit { padding: None };
-        let handle_result = handle(
-            &mut deps,
-            mock_env(
-                "lebron",
-                &[Coin {
-                    denom: "uscrt".to_string(),
-                    amount: Uint128(1000),
-                }],
-            ),
-            handle_msg,
-        );
-        assert!(
-            handle_result.is_ok(),
-            "handle() failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let balances = ReadonlyBalances::from_storage(&deps.storage);
-        let canonical = deps
-            .api
-            .canonical_address(&HumanAddr("lebron".to_string()))
-            .unwrap();
-        assert_eq!(balances.account_amount(&canonical), 6000)
-    }
-
-    #[test]
     fn test_handle_burn() {
         let initial_amount: u128 = 5000;
         let (init_result, mut deps) = init_helper(vec![InitialBalance {
@@ -2158,18 +1954,6 @@ mod tests {
             error,
             "This contract is stopped and this action is not allowed".to_string()
         );
-
-        let withdraw_msg = HandleMsg::Redeem {
-            amount: Uint128(5000),
-            denom: None,
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("lebron", &[]), withdraw_msg);
-        assert!(
-            handle_result.is_ok(),
-            "Withdraw failed: {}",
-            handle_result.err().unwrap()
-        );
     }
 
     #[test]
@@ -2202,18 +1986,6 @@ mod tests {
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("admin", &[]), send_msg);
-        let error = extract_error_msg(handle_result);
-        assert_eq!(
-            error,
-            "This contract is stopped and this action is not allowed".to_string()
-        );
-
-        let withdraw_msg = HandleMsg::Redeem {
-            amount: Uint128(5000),
-            denom: None,
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("lebron", &[]), withdraw_msg);
         let error = extract_error_msg(handle_result);
         assert_eq!(
             error,

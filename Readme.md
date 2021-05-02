@@ -1,6 +1,13 @@
 # Staking shares token - SNIP-20
 
+This is an adaptation of enigmampc's snip20-reference-impl[https://github.com/enigmampc/snip20-reference-impl].
+
+## Changes made
+
+1. Remove ability to deposit and withdraw scrt tokens.
+
 ## TO DO - ADAPT THIS TO THIS README
+
 https://github.com/enigmampc/SecretSwap/blob/master/contracts/secretswap_token/README.md
 
 ## Verifying build
@@ -27,6 +34,7 @@ If you compiled the same code that was used to build the deployed binary,
 they should match :)
 
 ## References
+
 1. https://github.com/enigmampc/snip20-reference-impl
 2. https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 3. https://github.com/enigmampc/scrt-finance-rewards/tree/master/contracts/gov-token
