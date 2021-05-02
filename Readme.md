@@ -7,6 +7,9 @@ This is an adaptation of enigmampc's snip20-reference-impl[https://github.com/en
 1. Remove ability to deposit and withdraw scrt tokens.
 2. Remove #query_exchange_rate.
 3. Remove all references to contract status
+3. Remove all references to contract status.
+6. Remove ability to make total supply private.
+7. Remove ability to set initial balances.
 
 ## TO DO - ADAPT THIS TO THIS README
 
