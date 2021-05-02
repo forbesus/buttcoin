@@ -5,6 +5,7 @@ This is an adaptation of enigmampc's snip20-reference-impl[https://github.com/en
 ## Changes made
 
 1. Remove ability to deposit and withdraw scrt tokens.
+2. Remove #query_exchange_rate.
 
 ## TO DO - ADAPT THIS TO THIS README
 
