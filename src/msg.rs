@@ -180,6 +180,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    Admin {},
     TokenInfo {},
     Allowance {
         owner: HumanAddr,
@@ -218,6 +219,9 @@ impl QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    Admin {
+        address: HumanAddr,
+    },
     TokenInfo {
         name: String,
         symbol: String,

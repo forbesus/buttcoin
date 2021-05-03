@@ -136,6 +136,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
 pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
     match msg {
+        QueryMsg::Admin {} => query_admin(&deps.storage),
         QueryMsg::TokenInfo {} => query_token_info(&deps.storage),
         QueryMsg::Minters { .. } => query_minters(deps),
         _ => authenticated_queries(deps, msg),
@@ -178,6 +179,15 @@ pub fn authenticated_queries<S: Storage, A: Api, Q: Querier>(
     Ok(to_binary(&QueryAnswer::ViewingKeyError {
         msg: "Wrong viewing key for this address or viewing key not set".to_string(),
     })?)
+}
+
+fn query_admin<S: ReadonlyStorage>(storage: &S) -> QueryResult {
+    let config = ReadonlyConfig::from_storage(storage);
+    let constants = config.constants()?;
+
+    to_binary(&QueryAnswer::Admin {
+        address: constants.admin,
+    })
 }
 
 fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
@@ -2050,6 +2060,44 @@ mod tests {
             error,
             "Wrong viewing key for this address or viewing key not set".to_string()
         );
+    }
+
+    #[test]
+    fn test_query_admin() {
+        let init_name = "sec-sec".to_string();
+        let init_admin = HumanAddr("admin".to_string());
+        let init_symbol = "SECSEC".to_string();
+        let init_decimals = 8;
+        let mut deps = mock_dependencies(20, &[]);
+        let env = mock_env("instantiator", &[]);
+        let init_msg = InitMsg {
+            name: init_name.clone(),
+            admin: Some(init_admin.clone()),
+            symbol: init_symbol.clone(),
+            decimals: init_decimals.clone(),
+            prng_seed: Binary::from("lolz fun yay".as_bytes()),
+        };
+        let init_result = init(&mut deps, env, init_msg);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+
+        let query_msg = QueryMsg::Admin {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "Init failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: QueryAnswer = from_binary(&query_result.unwrap()).unwrap();
+        match query_answer {
+            QueryAnswer::Admin { address } => {
+                assert_eq!(address, init_admin);
+            }
+            _ => panic!("unexpected"),
+        }
     }
 
     #[test]
