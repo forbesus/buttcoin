@@ -86,7 +86,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => try_send(deps, env, &recipient, amount, msg),
-        HandleMsg::Burn { amount, .. } => try_burn(deps, env, amount),
         HandleMsg::RegisterReceive { code_hash, .. } => try_register_receive(deps, env, code_hash),
         HandleMsg::CreateViewingKey { entropy, .. } => try_create_key(deps, env, entropy),
         HandleMsg::SetViewingKey { key, .. } => try_set_key(deps, env, key),
@@ -117,7 +116,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => try_send_from(deps, env, &owner, &recipient, amount, msg),
-        HandleMsg::BurnFrom { owner, amount, .. } => try_burn_from(deps, env, &owner, amount),
 
         // Mint
         HandleMsg::Mint {
@@ -591,77 +589,6 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_burn_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    owner: &HumanAddr,
-    amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let spender_address = deps.api.canonical_address(&env.message.sender)?;
-    let owner_address = deps.api.canonical_address(owner)?;
-    let amount = amount.u128();
-
-    let mut allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
-
-    if allowance.expiration.map(|ex| ex < env.block.time) == Some(true) {
-        allowance.amount = 0;
-        write_allowance(
-            &mut deps.storage,
-            &owner_address,
-            &spender_address,
-            allowance,
-        )?;
-        return Err(insufficient_allowance(0, amount));
-    }
-
-    if let Some(new_allowance) = allowance.amount.checked_sub(amount) {
-        allowance.amount = new_allowance;
-    } else {
-        return Err(insufficient_allowance(allowance.amount, amount));
-    }
-
-    write_allowance(
-        &mut deps.storage,
-        &owner_address,
-        &spender_address,
-        allowance,
-    )?;
-
-    // subtract from owner account
-    let mut balances = Balances::from_storage(&mut deps.storage);
-    let mut account_balance = balances.balance(&owner_address);
-
-    if let Some(new_balance) = account_balance.checked_sub(amount) {
-        account_balance = new_balance;
-    } else {
-        return Err(StdError::generic_err(format!(
-            "insufficient funds to burn: balance={}, required={}",
-            account_balance, amount
-        )));
-    }
-    balances.set_account_balance(&owner_address, account_balance);
-
-    // remove from supply
-    let mut config = Config::from_storage(&mut deps.storage);
-    let mut total_supply = config.total_supply();
-    if let Some(new_total_supply) = total_supply.checked_sub(amount) {
-        total_supply = new_total_supply;
-    } else {
-        return Err(StdError::generic_err(
-            "You're trying to burn more than is available in the total supply",
-        ));
-    }
-    config.set_total_supply(total_supply);
-
-    let res = HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BurnFrom { status: Success })?),
-    };
-
-    Ok(res)
-}
-
 fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -786,53 +713,6 @@ fn set_minters<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/// Burn tokens
-///
-/// Remove `amount` tokens from the system irreversibly, from signer account
-///
-/// @param amount the amount of money to burn
-fn try_burn<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let sender_address = deps.api.canonical_address(&env.message.sender)?;
-    let amount = amount.u128();
-
-    let mut balances = Balances::from_storage(&mut deps.storage);
-    let mut account_balance = balances.balance(&sender_address);
-
-    if let Some(new_account_balance) = account_balance.checked_sub(amount) {
-        account_balance = new_account_balance;
-    } else {
-        return Err(StdError::generic_err(format!(
-            "insufficient funds to burn: balance={}, required={}",
-            account_balance, amount
-        )));
-    }
-
-    balances.set_account_balance(&sender_address, account_balance);
-
-    let mut config = Config::from_storage(&mut deps.storage);
-    let mut total_supply = config.total_supply();
-    if let Some(new_total_supply) = total_supply.checked_sub(amount) {
-        total_supply = new_total_supply;
-    } else {
-        return Err(StdError::generic_err(
-            "You're trying to burn more than is available in the total supply",
-        ));
-    }
-    config.set_total_supply(total_supply);
-
-    let res = HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Burn { status: Success })?),
-    };
-
-    Ok(res)
-}
-
 fn perform_transfer<T: Storage>(
     store: &mut T,
     from: &CanonicalAddr,
@@ -952,12 +832,10 @@ mod tests {
         match handle_result {
             HandleAnswer::Transfer { status }
             | HandleAnswer::Send { status }
-            | HandleAnswer::Burn { status }
             | HandleAnswer::RegisterReceive { status }
             | HandleAnswer::SetViewingKey { status }
             | HandleAnswer::TransferFrom { status }
             | HandleAnswer::SendFrom { status }
-            | HandleAnswer::BurnFrom { status }
             | HandleAnswer::Mint { status }
             | HandleAnswer::ChangeAdmin { status }
             | HandleAnswer::SetMinters { status }
@@ -1449,87 +1327,6 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_burn_from() {
-        let (init_result, mut deps) = init_helper();
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-        let mint_amount: u128 = 5000;
-        let handle_msg = HandleMsg::Mint {
-            recipient: HumanAddr("bob".to_string()),
-            amount: Uint128(mint_amount),
-            padding: None,
-        };
-        let _handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
-
-        // Burn before allowance
-        let handle_msg = HandleMsg::BurnFrom {
-            owner: HumanAddr("bob".to_string()),
-            amount: Uint128(2500),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
-        let error = extract_error_msg(handle_result);
-        assert!(error.contains("insufficient allowance"));
-
-        // Burn more than allowance
-        let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
-            padding: None,
-            expiration: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "handle() failed: {}",
-            handle_result.err().unwrap()
-        );
-        let handle_msg = HandleMsg::BurnFrom {
-            owner: HumanAddr("bob".to_string()),
-            amount: Uint128(2500),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
-        let error = extract_error_msg(handle_result);
-        assert!(error.contains("insufficient allowance"));
-
-        // Sanity check
-        let handle_msg = HandleMsg::BurnFrom {
-            owner: HumanAddr("bob".to_string()),
-            amount: Uint128(2000),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "handle() failed: {}",
-            handle_result.err().unwrap()
-        );
-        let bob_canonical = deps
-            .api
-            .canonical_address(&HumanAddr("bob".to_string()))
-            .unwrap();
-        let bob_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
-            .account_amount(&bob_canonical);
-        assert_eq!(bob_balance, 5000 - 2000);
-        let total_supply = ReadonlyConfig::from_storage(&deps.storage).total_supply();
-        assert_eq!(total_supply, 5000 - 2000);
-
-        // Second burn more than allowance
-        let handle_msg = HandleMsg::BurnFrom {
-            owner: HumanAddr("bob".to_string()),
-            amount: Uint128(1),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
-        let error = extract_error_msg(handle_result);
-        assert!(error.contains("insufficient allowance"));
-    }
-
-    #[test]
     fn test_handle_decrease_allowance() {
         let (init_result, mut deps) = init_helper();
         assert!(
@@ -1714,39 +1511,6 @@ mod tests {
             .unwrap()
             .admin;
         assert_eq!(admin, HumanAddr("bob".to_string()));
-    }
-
-    #[test]
-    fn test_handle_burn() {
-        let (init_result, mut deps) = init_helper();
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-        let mint_amount: u128 = 5000;
-        let handle_msg = HandleMsg::Mint {
-            recipient: HumanAddr("lebron".to_string()),
-            amount: Uint128(mint_amount),
-            padding: None,
-        };
-        let _handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
-
-        let supply = ReadonlyConfig::from_storage(&deps.storage).total_supply();
-        let burn_amount: u128 = 100;
-        let handle_msg = HandleMsg::Burn {
-            amount: Uint128(burn_amount),
-            padding: None,
-        };
-        let handle_result = handle(&mut deps, mock_env("lebron", &[]), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "Pause handle failed: {}",
-            handle_result.err().unwrap()
-        );
-
-        let new_supply = ReadonlyConfig::from_storage(&deps.storage).total_supply();
-        assert_eq!(new_supply, supply - burn_amount);
     }
 
     #[test]

@@ -5,6 +5,17 @@
     {
       "type": "object",
       "required": [
+        "admin"
+      ],
+      "properties": {
+        "admin": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "token_info"
       ],
       "properties": {

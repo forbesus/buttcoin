@@ -8,6 +8,7 @@ The native token of btn.group[https://www.btn.group] built on the Secret network
 3. Remove all references to contract status
 4. Remove ability to make total supply private.
 5. Remove ability to set initial balances.
+6. Remove ability to burn tokens.
 
 ## Local code examples
 ```

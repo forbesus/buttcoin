@@ -30,10 +30,6 @@ pub enum HandleMsg {
         msg: Option<Binary>,
         padding: Option<String>,
     },
-    Burn {
-        amount: Uint128,
-        padding: Option<String>,
-    },
     RegisterReceive {
         code_hash: String,
         padding: Option<String>,
@@ -71,11 +67,6 @@ pub enum HandleMsg {
         recipient: HumanAddr,
         amount: Uint128,
         msg: Option<Binary>,
-        padding: Option<String>,
-    },
-    BurnFrom {
-        owner: HumanAddr,
-        amount: Uint128,
         padding: Option<String>,
     },
 
@@ -123,9 +114,6 @@ pub enum HandleAnswer {
     Send {
         status: ResponseStatus,
     },
-    Burn {
-        status: ResponseStatus,
-    },
     RegisterReceive {
         status: ResponseStatus,
     },
@@ -151,9 +139,6 @@ pub enum HandleAnswer {
         status: ResponseStatus,
     },
     SendFrom {
-        status: ResponseStatus,
-    },
-    BurnFrom {
         status: ResponseStatus,
     },
 
