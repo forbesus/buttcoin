@@ -1,4 +1,4 @@
-# BUTTCOIN - SNIP-20
+# Buttcoin - SNIP-20
 
 This is an adaptation of enigmampc's snip20-reference-impl[https://github.com/enigmampc/snip20-reference-impl].
 
