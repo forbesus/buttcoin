@@ -5,44 +5,6 @@
     {
       "type": "object",
       "required": [
-        "deposit"
-      ],
-      "properties": {
-        "deposit": {
-          "type": "object",
-          "required": [
-            "status"
-          ],
-          "properties": {
-            "status": {
-              "$ref": "#/definitions/ResponseStatus"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "redeem"
-      ],
-      "properties": {
-        "redeem": {
-          "type": "object",
-          "required": [
-            "status"
-          ],
-          "properties": {
-            "status": {
-              "$ref": "#/definitions/ResponseStatus"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
         "transfer"
       ],
       "properties": {

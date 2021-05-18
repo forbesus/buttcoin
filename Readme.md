@@ -9,6 +9,7 @@ The native token of btn.group[https://www.btn.group] built on the Secret network
 4. Remove ability to make total supply private.
 5. Remove ability to set initial balances.
 6. Remove ability to burn tokens.
+7. Add block_height to transaction(Tx)
 
 ## Local code examples
 ```

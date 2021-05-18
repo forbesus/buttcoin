@@ -200,6 +200,7 @@
     "Tx": {
       "type": "object",
       "required": [
+        "block_height",
         "coins",
         "from",
         "id",
@@ -207,6 +208,11 @@
         "sender"
       ],
       "properties": {
+        "block_height": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
         "coins": {
           "$ref": "#/definitions/Coin"
         },

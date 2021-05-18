@@ -35,6 +35,7 @@ pub const PREFIX_RECEIVERS: &[u8] = b"receivers";
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 pub struct Tx {
     pub id: u64,
+    pub block_height: u64,
     pub from: HumanAddr,
     pub sender: HumanAddr,
     pub receiver: HumanAddr,
@@ -45,6 +46,7 @@ impl Tx {
     pub fn into_stored<A: Api>(self, api: &A) -> StdResult<StoredTx> {
         let tx = StoredTx {
             id: self.id,
+            block_height: self.block_height,
             from: api.canonical_address(&self.from)?,
             sender: api.canonical_address(&self.sender)?,
             receiver: api.canonical_address(&self.receiver)?,
@@ -57,6 +59,7 @@ impl Tx {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StoredTx {
     pub id: u64,
+    pub block_height: u64,
     pub from: CanonicalAddr,
     pub sender: CanonicalAddr,
     pub receiver: CanonicalAddr,
@@ -67,6 +70,7 @@ impl StoredTx {
     pub fn into_humanized<A: Api>(self, api: &A) -> StdResult<Tx> {
         let tx = Tx {
             id: self.id,
+            block_height: self.block_height,
             from: api.human_address(&self.from)?,
             sender: api.human_address(&self.sender)?,
             receiver: api.human_address(&self.receiver)?,
@@ -78,6 +82,7 @@ impl StoredTx {
 
 pub fn store_transfer<S: Storage>(
     store: &mut S,
+    block_height: u64,
     owner: &CanonicalAddr,
     sender: &CanonicalAddr,
     receiver: &CanonicalAddr,
@@ -91,6 +96,7 @@ pub fn store_transfer<S: Storage>(
     let coins = Coin { denom, amount };
     let tx = StoredTx {
         id,
+        block_height: block_height,
         from: owner.clone(),
         sender: sender.clone(),
         receiver: receiver.clone(),

@@ -384,6 +384,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
 
     store_transfer(
         &mut deps.storage,
+        env.block.height,
         &sender_address,
         &sender_address,
         &recipient_address,
@@ -531,6 +532,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
 
     store_transfer(
         &mut deps.storage,
+        env.block.height,
         &owner_address,
         &spender_address,
         &recipient_address,
