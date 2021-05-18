@@ -10,6 +10,8 @@ The native token of btn.group[https://www.btn.group] built on the Secret network
 5. Remove ability to set initial balances.
 6. Remove ability to burn tokens.
 7. Add block_height to transaction(Tx)
+  * Decided not to store block.time as this can be obtained via the chain and want to keep the contract as lean as possible.
+8. Store minting in transfer history.
 
 ## Local code examples
 ```

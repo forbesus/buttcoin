@@ -279,11 +279,11 @@ fn try_mint<S: Storage, A: Api, Q: Querier>(
     }
     config.set_total_supply(total_supply);
 
-    let receipient_account = &deps.api.canonical_address(&address)?;
+    let recipient_account = &deps.api.canonical_address(&address)?;
 
     let mut balances = Balances::from_storage(&mut deps.storage);
 
-    let mut account_balance = balances.balance(receipient_account);
+    let mut account_balance = balances.balance(recipient_account);
 
     if let Some(new_balance) = account_balance.checked_add(amount) {
         account_balance = new_balance;
@@ -297,7 +297,20 @@ fn try_mint<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    balances.set_account_balance(receipient_account, account_balance);
+    balances.set_account_balance(recipient_account, account_balance);
+
+    let minter = &deps.api.canonical_address(&env.message.sender)?;
+    let symbol = Config::from_storage(&mut deps.storage).constants()?.symbol;
+
+    store_transfer(
+        &mut deps.storage,
+        env.block.height,
+        None,
+        minter,
+        recipient_account,
+        Uint128(amount),
+        symbol,
+    )?;
 
     let res = HandleResponse {
         messages: vec![],
@@ -385,7 +398,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     store_transfer(
         &mut deps.storage,
         env.block.height,
-        &sender_address,
+        Some(sender_address.clone()),
         &sender_address,
         &recipient_address,
         amount,
@@ -533,7 +546,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
     store_transfer(
         &mut deps.storage,
         env.block.height,
-        &owner_address,
+        Some(owner_address),
         &spender_address,
         &recipient_address,
         amount,
@@ -2099,7 +2112,7 @@ mod tests {
         };
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(ensure_success(handle_result.unwrap()));
-
+        // Transfer
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("alice".to_string()),
             amount: Uint128(1000),
@@ -2108,11 +2121,13 @@ mod tests {
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
+        // Transfer
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("banana".to_string()),
             amount: Uint128(500),
             padding: None,
         };
+        // Transfer
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
@@ -2121,6 +2136,7 @@ mod tests {
             amount: Uint128(2500),
             padding: None,
         };
+        // Transfer
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
@@ -2151,7 +2167,7 @@ mod tests {
             QueryAnswer::TransferHistory { txs } => txs,
             _ => panic!("Unexpected"),
         };
-        assert_eq!(transfers.len(), 3);
+        assert_eq!(transfers.len(), 4);
 
         let query_msg = QueryMsg::TransferHistory {
             address: HumanAddr("bob".to_string()),
