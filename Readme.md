@@ -1,5 +1,5 @@
 # Buttcoin (BUTT)
-The native token of btn.group[https://www.btn.group] built on the Secret network blockchain.
+The native token of [btn.group](https://www.btn.group) built on the Secret network blockchain.
 
 ## Changes made
 
