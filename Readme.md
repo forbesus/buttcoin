@@ -1,5 +1,5 @@
 # Buttcoin (BUTT)
-The native token of [btn.group](https://www.btn.group) built on the Secret network blockchain.
+The native token of [btn.group](https://btn.group) built on the Secret network blockchain.
 
 ## Changes made
 
@@ -20,33 +20,6 @@ secretcli query compute query $CONTRACT '{"token_info": {}}'
 # Code below for setting minters probably needs tweaking.
 secretcli tx compute execute $CONTRACT '{"set_minters": { "minters": "[secret000000000000000000000000FRIED]" }}' --from a --keyring-backend test
 ```
-
-## TO DO - ADAPT THIS TO THIS README
-
-https://github.com/enigmampc/SecretSwap/blob/master/contracts/secretswap_token/README.md
-
-## Verifying build
-
-Given the address of a contract, you can query its code hash (sha256) by running:
-```
-secretcli q compute contract-hash <contract-address>
-```
-
-You can verify that this hash is correct by comparing it to the decompressed
-contract binary.
-
-To get the contract binary for a specific tag or commit and calculate its hash,
-run:
-```
-git checkout <tag-or-commit>
-make compile-optimized-reproducible
-gunzip -c contract.wasm.gz >contract.wasm
-sha256sum contract.wasm
-```
-
-Now compare the result with the hash returned by `secretcli`.
-If you compiled the same code that was used to build the deployed binary,
-they should match :)
 
 ## References
 
