@@ -1,12 +1,10 @@
 use std::any::type_name;
 use std::convert::TryFrom;
 
-use cosmwasm_std::{
-    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
-};
+use cosmwasm_std::{CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
-use secret_toolkit::storage::{AppendStore, AppendStoreMut, TypedStore, TypedStoreMut};
+use secret_toolkit::storage::{TypedStore, TypedStoreMut};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,7 +13,6 @@ use crate::viewing_key::ViewingKey;
 use serde::de::DeserializeOwned;
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub const PREFIX_TXS: &[u8] = b"transfers";
 
 pub const KEY_CONSTANTS: &[u8] = b"constants";
 pub const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
@@ -27,142 +24,6 @@ pub const PREFIX_BALANCES: &[u8] = b"balances";
 pub const PREFIX_ALLOWANCES: &[u8] = b"allowances";
 pub const PREFIX_VIEW_KEY: &[u8] = b"viewingkey";
 pub const PREFIX_RECEIVERS: &[u8] = b"receivers";
-
-// Note that id is a globally incrementing counter.
-// Since it's 64 bits long, even at 50 tx/s it would take
-// over 11 billion years for it to rollback. I'm pretty sure
-// we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
-pub struct Tx {
-    pub id: u64,
-    pub block_height: u64,
-    pub from: Option<HumanAddr>,
-    pub sender: HumanAddr,
-    pub receiver: HumanAddr,
-    pub coins: Coin,
-}
-
-impl Tx {
-    pub fn into_stored<A: Api>(self, api: &A) -> StdResult<StoredTx> {
-        let from = if self.from.is_none() {
-            None
-        } else {
-            Some(api.canonical_address(&self.from.unwrap())?)
-        };
-
-        let tx = StoredTx {
-            id: self.id,
-            block_height: self.block_height,
-            from: from,
-            sender: api.canonical_address(&self.sender)?,
-            receiver: api.canonical_address(&self.receiver)?,
-            coins: self.coins,
-        };
-        Ok(tx)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct StoredTx {
-    pub id: u64,
-    pub block_height: u64,
-    pub from: Option<CanonicalAddr>,
-    pub sender: CanonicalAddr,
-    pub receiver: CanonicalAddr,
-    pub coins: Coin,
-}
-
-impl StoredTx {
-    pub fn into_humanized<A: Api>(self, api: &A) -> StdResult<Tx> {
-        let from = if self.from.is_none() {
-            None
-        } else {
-            Some(api.human_address(&self.from.unwrap())?)
-        };
-        let tx = Tx {
-            id: self.id,
-            block_height: self.block_height,
-            from: from,
-            sender: api.human_address(&self.sender)?,
-            receiver: api.human_address(&self.receiver)?,
-            coins: self.coins,
-        };
-        Ok(tx)
-    }
-}
-
-pub fn store_transfer<S: Storage>(
-    store: &mut S,
-    block_height: u64,
-    owner: Option<CanonicalAddr>,
-    sender: &CanonicalAddr,
-    receiver: &CanonicalAddr,
-    amount: Uint128,
-    denom: String,
-) -> StdResult<()> {
-    let mut config = Config::from_storage(store);
-    let id = config.tx_count() + 1;
-    config.set_tx_count(id)?;
-
-    let coins = Coin { denom, amount };
-    let tx = StoredTx {
-        id,
-        block_height: block_height,
-        from: owner.clone(),
-        sender: sender.clone(),
-        receiver: receiver.clone(),
-        coins,
-    };
-
-    if owner.is_some() && &owner.clone().unwrap() != sender {
-        append_tx(store, tx.clone(), &owner.unwrap())?;
-    }
-    append_tx(store, tx.clone(), &sender)?;
-    append_tx(store, tx, &receiver)?;
-
-    Ok(())
-}
-
-fn append_tx<S: Storage>(
-    store: &mut S,
-    tx: StoredTx,
-    for_address: &CanonicalAddr,
-) -> StdResult<()> {
-    let mut store = PrefixedStorage::multilevel(&[PREFIX_TXS, for_address.as_slice()], store);
-    let mut store = AppendStoreMut::attach_or_create(&mut store)?;
-    store.push(&tx)
-}
-
-pub fn get_transfers<A: Api, S: ReadonlyStorage>(
-    api: &A,
-    storage: &S,
-    for_address: &CanonicalAddr,
-    page: u32,
-    page_size: u32,
-) -> StdResult<Vec<Tx>> {
-    let store = ReadonlyPrefixedStorage::multilevel(&[PREFIX_TXS, for_address.as_slice()], storage);
-
-    // Try to access the storage of txs for the account.
-    // If it doesn't exist yet, return an empty list of transfers.
-    let store = if let Some(result) = AppendStore::<StoredTx, _>::attach(&store) {
-        result?
-    } else {
-        return Ok(vec![]);
-    };
-
-    // Take `page_size` txs starting from the latest tx, potentially skipping `page * page_size`
-    // txs from the start.
-    let tx_iter = store
-        .iter()
-        .rev()
-        .skip((page * page_size) as _)
-        .take(page_size as _);
-    // The `and_then` here flattens the `StdResult<StdResult<Tx>>` to an `StdResult<Tx>`
-    let txs: StdResult<Vec<Tx>> = tx_iter
-        .map(|tx| tx.map(|tx| tx.into_humanized(api)).and_then(|x| x))
-        .collect();
-    txs
-}
 
 // Config
 

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 
-use crate::state::Tx;
+use crate::transaction_history::{RichTx, Tx};
 use crate::viewing_key::ViewingKey;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -22,12 +22,14 @@ pub enum HandleMsg {
     Transfer {
         recipient: HumanAddr,
         amount: Uint128,
+        memo: Option<String>,
         padding: Option<String>,
     },
     Send {
         recipient: HumanAddr,
         amount: Uint128,
         msg: Option<Binary>,
+        memo: Option<String>,
         padding: Option<String>,
     },
     RegisterReceive {
@@ -60,6 +62,7 @@ pub enum HandleMsg {
         owner: HumanAddr,
         recipient: HumanAddr,
         amount: Uint128,
+        memo: Option<String>,
         padding: Option<String>,
     },
     SendFrom {
@@ -67,6 +70,7 @@ pub enum HandleMsg {
         recipient: HumanAddr,
         amount: Uint128,
         msg: Option<Binary>,
+        memo: Option<String>,
         padding: Option<String>,
     },
 
@@ -74,6 +78,7 @@ pub enum HandleMsg {
     Mint {
         recipient: HumanAddr,
         amount: Uint128,
+        memo: Option<String>,
         padding: Option<String>,
     },
     AddMinters {
@@ -174,6 +179,12 @@ pub enum QueryMsg {
         page: Option<u32>,
         page_size: u32,
     },
+    TransactionHistory {
+        address: HumanAddr,
+        key: String,
+        page: Option<u32>,
+        page_size: u32,
+    },
     Minters {},
 }
 
@@ -216,8 +227,12 @@ pub enum QueryAnswer {
     },
     TransferHistory {
         txs: Vec<Tx>,
+        total: Option<u64>,
     },
-
+    TransactionHistory {
+        txs: Vec<RichTx>,
+        total: Option<u64>,
+    },
     ViewingKeyError {
         msg: String,
     },
