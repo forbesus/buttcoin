@@ -1,5 +1,3 @@
-/// This contract implements SNIP-20 standard:
-/// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use cosmwasm_std::{
     log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     InitResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
@@ -145,7 +143,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
     match msg {
         QueryMsg::Admin {} => query_admin(&deps.storage),
         QueryMsg::TokenInfo {} => query_token_info(&deps.storage),
-        QueryMsg::Minters { .. } => query_minters(deps),
+        QueryMsg::Minters {} => query_minters(deps),
         _ => authenticated_queries(deps, msg),
     }
 }

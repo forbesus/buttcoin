@@ -193,6 +193,9 @@ impl QueryMsg {
         match self {
             Self::Balance { address, key } => (vec![address], ViewingKey(key.clone())),
             Self::TransferHistory { address, key, .. } => (vec![address], ViewingKey(key.clone())),
+            Self::TransactionHistory { address, key, .. } => {
+                (vec![address], ViewingKey(key.clone()))
+            }
             Self::Allowance {
                 owner,
                 spender,
