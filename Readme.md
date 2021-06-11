@@ -3,22 +3,11 @@ The native token of [btn.group](https://btn.group) built on the Secret network b
 
 ## Changes made
 
-1. Remove ability to deposit and withdraw scrt tokens.
-2. Remove #query_exchange_rate.
-3. Remove all references to contract status
-4. Remove ability to make total supply private.
-5. Remove ability to mint and burn tokens
-
-## Local code examples
-```
-INIT='{"name": "buttcoin", "symbol": "BUTT", "decimals": 12, "prng_seed": "YXNkZmFzZGZhc2RmYXNkZnNhZGZhc2RmYXNkZg=="}'
-CODE_ID=1
-secretcli tx compute instantiate $CODE_ID "$INIT" --from a --label "buttcoin" -y --keyring-backend test
-CONTRACT={ address of contract instantiated }
-secretcli query compute query $CONTRACT '{"token_info": {}}'
-# Code below for setting minters probably needs tweaking.
-secretcli tx compute execute $CONTRACT '{"set_minters": { "minters": "[secret000000000000000000000000FRIED]" }}' --from a --keyring-backend test
-```
+1. Remove ability to deposit and redeem scrt tokens.
+2. Remove ability to change contract status.
+3. Remove ability to make total supply private.
+4. Remove ability to mint and burn tokens.
+5. Remove all reference to admin.
 
 ## References
 
