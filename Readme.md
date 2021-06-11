@@ -7,8 +7,7 @@ The native token of [btn.group](https://btn.group) built on the Secret network b
 2. Remove #query_exchange_rate.
 3. Remove all references to contract status
 4. Remove ability to make total supply private.
-5. Remove ability to set initial balances.
-6. Remove ability to burn tokens.
+5. Remove ability to mint and burn tokens
 
 ## Local code examples
 ```
@@ -24,6 +23,6 @@ secretcli tx compute execute $CONTRACT '{"set_minters": { "minters": "[secret000
 ## References
 
 1. https://github.com/enigmampc/snip20-reference-impl
-2. https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
+2. https://github.com/SecretFoundation/SNIPs
 3. https://github.com/enigmampc/scrt-finance-rewards/tree/master/contracts/gov-token
 4. https://github.com/enigmampc/SecretSwap/blob/master/contracts/secretswap_token/README.md

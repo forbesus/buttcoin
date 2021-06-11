@@ -74,26 +74,6 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
 
-    // Mint
-    Mint {
-        recipient: HumanAddr,
-        amount: Uint128,
-        memo: Option<String>,
-        padding: Option<String>,
-    },
-    AddMinters {
-        minters: Vec<HumanAddr>,
-        padding: Option<String>,
-    },
-    RemoveMinters {
-        minters: Vec<HumanAddr>,
-        padding: Option<String>,
-    },
-    SetMinters {
-        minters: Vec<HumanAddr>,
-        padding: Option<String>,
-    },
-
     // Admin
     ChangeAdmin {
         address: HumanAddr,
@@ -139,20 +119,6 @@ pub enum HandleAnswer {
         status: ResponseStatus,
     },
 
-    // Mint
-    Mint {
-        status: ResponseStatus,
-    },
-    AddMinters {
-        status: ResponseStatus,
-    },
-    RemoveMinters {
-        status: ResponseStatus,
-    },
-    SetMinters {
-        status: ResponseStatus,
-    },
-
     // Other
     ChangeAdmin {
         status: ResponseStatus,
@@ -185,7 +151,6 @@ pub enum QueryMsg {
         page: Option<u32>,
         page_size: u32,
     },
-    Minters {},
 }
 
 impl QueryMsg {
@@ -238,9 +203,6 @@ pub enum QueryAnswer {
     },
     ViewingKeyError {
         msg: String,
-    },
-    Minters {
-        minters: Vec<HumanAddr>,
     },
 }
 

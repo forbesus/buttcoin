@@ -16,7 +16,6 @@ pub static CONFIG_KEY: &[u8] = b"config";
 
 pub const KEY_CONSTANTS: &[u8] = b"constants";
 pub const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
-pub const KEY_MINTERS: &[u8] = b"minters";
 pub const KEY_TX_COUNT: &[u8] = b"tx-count";
 
 pub const PREFIX_CONFIG: &[u8] = b"config";
@@ -57,10 +56,6 @@ impl<'a, S: ReadonlyStorage> ReadonlyConfig<'a, S> {
 
     pub fn total_supply(&self) -> u128 {
         self.as_readonly().total_supply()
-    }
-
-    pub fn minters(&self) -> Vec<HumanAddr> {
-        self.as_readonly().minters()
     }
 
     pub fn tx_count(&self) -> u64 {
@@ -117,31 +112,6 @@ impl<'a, S: Storage> Config<'a, S> {
         self.storage.set(KEY_TOTAL_SUPPLY, &supply.to_be_bytes());
     }
 
-    pub fn set_minters(&mut self, minters_to_set: Vec<HumanAddr>) -> StdResult<()> {
-        set_bin_data(&mut self.storage, KEY_MINTERS, &minters_to_set)
-    }
-
-    pub fn add_minters(&mut self, minters_to_add: Vec<HumanAddr>) -> StdResult<()> {
-        let mut minters = self.minters();
-        minters.extend(minters_to_add);
-
-        self.set_minters(minters)
-    }
-
-    pub fn remove_minters(&mut self, minters_to_remove: Vec<HumanAddr>) -> StdResult<()> {
-        let mut minters = self.minters();
-
-        for minter in minters_to_remove {
-            minters.retain(|x| x != &minter);
-        }
-
-        self.set_minters(minters)
-    }
-
-    pub fn minters(&mut self) -> Vec<HumanAddr> {
-        self.as_readonly().minters()
-    }
-
     pub fn tx_count(&self) -> u64 {
         self.as_readonly().tx_count()
     }
@@ -175,10 +145,6 @@ impl<'a, S: ReadonlyStorage> ReadonlyConfigImpl<'a, S> {
             .expect("no total supply stored in config");
         // This unwrap is ok because we know we stored things correctly
         slice_to_u128(&supply_bytes).unwrap()
-    }
-
-    fn minters(&self) -> Vec<HumanAddr> {
-        get_bin_data(self.0, KEY_MINTERS).unwrap()
     }
 
     pub fn tx_count(&self) -> u64 {

@@ -143,14 +143,6 @@ impl StoredTxAction {
             address3: Some(recipient),
         }
     }
-    fn mint(minter: CanonicalAddr, recipient: CanonicalAddr) -> Self {
-        Self {
-            tx_type: TxCode::Mint.to_u8(),
-            address1: Some(minter),
-            address2: Some(recipient),
-            address3: None,
-        }
-    }
 
     fn into_humanized<A: Api>(self, api: &A) -> StdResult<TxAction> {
         let transfer_addr_err = || {
@@ -204,23 +196,6 @@ struct StoredRichTx {
 }
 
 impl StoredRichTx {
-    fn new(
-        id: u64,
-        action: StoredTxAction,
-        coins: Coin,
-        memo: Option<String>,
-        block: &cosmwasm_std::BlockInfo,
-    ) -> Self {
-        Self {
-            id,
-            action,
-            coins,
-            memo,
-            block_time: block.time,
-            block_height: block.height,
-        }
-    }
-
     fn into_humanized<A: Api>(self, api: &A) -> StdResult<RichTx> {
         Ok(RichTx {
             id: self.id,
@@ -287,28 +262,6 @@ pub fn store_transfer<S: Storage>(
     append_transfer(store, &transfer, sender)?;
     append_tx(store, &tx, receiver)?;
     append_transfer(store, &transfer, receiver)?;
-
-    Ok(())
-}
-
-pub fn store_mint<S: Storage>(
-    store: &mut S,
-    minter: &CanonicalAddr,
-    recipient: &CanonicalAddr,
-    amount: Uint128,
-    denom: String,
-    memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
-) -> StdResult<()> {
-    let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
-    let action = StoredTxAction::mint(minter.clone(), recipient.clone());
-    let tx = StoredRichTx::new(id, action, coins, memo, block);
-
-    if minter != recipient {
-        append_tx(store, &tx, recipient)?;
-    }
-    append_tx(store, &tx, minter)?;
 
     Ok(())
 }
