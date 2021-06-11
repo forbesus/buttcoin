@@ -5,25 +5,6 @@
     {
       "type": "object",
       "required": [
-        "admin"
-      ],
-      "properties": {
-        "admin": {
-          "type": "object",
-          "required": [
-            "address"
-          ],
-          "properties": {
-            "address": {
-              "$ref": "#/definitions/HumanAddr"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
         "token_info"
       ],
       "properties": {
@@ -188,28 +169,6 @@
           "properties": {
             "msg": {
               "type": "string"
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "minters"
-      ],
-      "properties": {
-        "minters": {
-          "type": "object",
-          "required": [
-            "minters"
-          ],
-          "properties": {
-            "minters": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/HumanAddr"
-              }
             }
           }
         }

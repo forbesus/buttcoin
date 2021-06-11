@@ -29,7 +29,6 @@ pub const PREFIX_RECEIVERS: &[u8] = b"receivers";
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct Constants {
     pub name: String,
-    pub admin: HumanAddr,
     pub symbol: String,
     pub decimals: u8,
     pub prng_seed: Vec<u8>,

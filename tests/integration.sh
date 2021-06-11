@@ -1050,7 +1050,7 @@ function main() {
     local prng_seed
     prng_seed="$(base64 <<<'enigma-rocks')"
     local init_msg
-    init_msg='{"name":"secret-secret","admin":"'"${ADDRESS[a]}"'","symbol":"SSCRT","decimals":6,"initial_balances":[],"prng_seed":"'"$prng_seed"'","config":{"public_total_supply":true}}'
+    init_msg='{"name":"secret-secret","symbol":"SSCRT","decimals":6,"initial_balances":[],"prng_seed":"'"$prng_seed"'","config":{"public_total_supply":true}}'
     contract_addr="$(create_contract '.' "$init_msg")"
 
     # To make testing faster, check the logs and try to reuse the deployed contract and VKs from previous runs.

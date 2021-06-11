@@ -5,17 +5,6 @@
     {
       "type": "object",
       "required": [
-        "admin"
-      ],
-      "properties": {
-        "admin": {
-          "type": "object"
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
         "token_info"
       ],
       "properties": {
@@ -145,17 +134,6 @@
               "minimum": 0.0
             }
           }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "minters"
-      ],
-      "properties": {
-        "minters": {
-          "type": "object"
         }
       }
     }

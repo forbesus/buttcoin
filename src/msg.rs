@@ -6,12 +6,18 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use crate::transaction_history::{RichTx, Tx};
 use crate::viewing_key::ViewingKey;
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+pub struct InitialBalance {
+    pub address: HumanAddr,
+    pub amount: Uint128,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
     pub name: String,
-    pub admin: Option<HumanAddr>,
     pub symbol: String,
     pub decimals: u8,
+    pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
 }
 
@@ -73,12 +79,6 @@ pub enum HandleMsg {
         memo: Option<String>,
         padding: Option<String>,
     },
-
-    // Admin
-    ChangeAdmin {
-        address: HumanAddr,
-        padding: Option<String>,
-    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
@@ -118,17 +118,11 @@ pub enum HandleAnswer {
     SendFrom {
         status: ResponseStatus,
     },
-
-    // Other
-    ChangeAdmin {
-        status: ResponseStatus,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Admin {},
     TokenInfo {},
     Allowance {
         owner: HumanAddr,
@@ -175,9 +169,6 @@ impl QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Admin {
-        address: HumanAddr,
-    },
     TokenInfo {
         name: String,
         symbol: String,
