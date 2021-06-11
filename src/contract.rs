@@ -4,7 +4,8 @@ use cosmwasm_std::{
 };
 
 use crate::msg::{
-    space_pad, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg, ResponseStatus::Success,
+    space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
+    ResponseStatus::Success,
 };
 use crate::rand::sha_256;
 use crate::receiver::Snip20ReceiveMsg;
@@ -140,6 +141,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
     match msg {
         QueryMsg::TokenInfo {} => query_token_info(&deps.storage),
+        QueryMsg::TokenConfig {} => query_token_config(),
+        QueryMsg::ContractStatus {} => query_contract_status(),
+        QueryMsg::ExchangeRate {} => query_exchange_rate(),
+        QueryMsg::Minters {} => query_minters(),
         _ => authenticated_queries(deps, msg),
     }
 }
@@ -186,6 +191,29 @@ pub fn authenticated_queries<S: Storage, A: Api, Q: Querier>(
     Ok(to_binary(&QueryAnswer::ViewingKeyError {
         msg: "Wrong viewing key for this address or viewing key not set".to_string(),
     })?)
+}
+
+fn query_exchange_rate() -> QueryResult {
+    to_binary(&QueryAnswer::ExchangeRate {
+        rate: Uint128(0),
+        denom: String::new(),
+    })
+}
+
+fn query_token_config() -> QueryResult {
+    to_binary(&QueryAnswer::TokenConfig {
+        public_total_supply: true,
+        deposit_enabled: false,
+        redeem_enabled: false,
+        mint_enabled: false,
+        burn_enabled: false,
+    })
+}
+
+fn query_contract_status() -> QueryResult {
+    to_binary(&QueryAnswer::ContractStatus {
+        status: ContractStatusLevel::NormalRun,
+    })
 }
 
 fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
@@ -242,6 +270,10 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
     let amount = Uint128(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
     let response = QueryAnswer::Balance { amount };
     to_binary(&response)
+}
+
+fn query_minters() -> StdResult<Binary> {
+    to_binary(&QueryAnswer::Minters { minters: vec![] })
 }
 
 pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
@@ -1472,6 +1504,73 @@ mod tests {
     }
 
     #[test]
+    fn test_query_token_config() {
+        let (init_result, deps) = init_helper(vec![InitialBalance {
+            address: HumanAddr("giannis".to_string()),
+            amount: Uint128(5000),
+        }]);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+
+        let query_msg = QueryMsg::TokenConfig {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "Init failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: QueryAnswer = from_binary(&query_result.unwrap()).unwrap();
+        match query_answer {
+            QueryAnswer::TokenConfig {
+                public_total_supply,
+                deposit_enabled,
+                redeem_enabled,
+                mint_enabled,
+                burn_enabled,
+            } => {
+                assert_eq!(public_total_supply, true);
+                assert_eq!(deposit_enabled, false);
+                assert_eq!(redeem_enabled, false);
+                assert_eq!(mint_enabled, false);
+                assert_eq!(burn_enabled, false);
+            }
+            _ => panic!("unexpected"),
+        }
+    }
+
+    #[test]
+    fn test_query_exchange_rate() {
+        let (init_result, deps) = init_helper(vec![InitialBalance {
+            address: HumanAddr("giannis".to_string()),
+            amount: Uint128(5000),
+        }]);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+
+        let query_msg = QueryMsg::ExchangeRate {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "Init failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: QueryAnswer = from_binary(&query_result.unwrap()).unwrap();
+        match query_answer {
+            QueryAnswer::ExchangeRate { rate, denom } => {
+                assert_eq!(rate, Uint128(0));
+                assert_eq!(denom, "");
+            }
+            _ => panic!("unexpected"),
+        }
+    }
+
+    #[test]
     fn test_query_allowance() {
         let (init_result, mut deps) = init_helper(vec![InitialBalance {
             address: HumanAddr("giannis".to_string()),
@@ -1625,6 +1724,62 @@ mod tests {
             _ => panic!("Unexpected"),
         };
         assert_eq!(balance, Uint128(5000));
+    }
+
+    #[test]
+    fn test_query_contract_status() {
+        let (init_result, deps) = init_helper(vec![InitialBalance {
+            address: HumanAddr("giannis".to_string()),
+            amount: Uint128(5000),
+        }]);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+
+        let query_msg = QueryMsg::ContractStatus {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "Init failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: QueryAnswer = from_binary(&query_result.unwrap()).unwrap();
+        match query_answer {
+            QueryAnswer::ContractStatus { status } => {
+                assert_eq!(status, ContractStatusLevel::NormalRun);
+            }
+            _ => panic!("unexpected"),
+        }
+    }
+
+    #[test]
+    fn test_query_minters() {
+        let (init_result, deps) = init_helper(vec![InitialBalance {
+            address: HumanAddr("giannis".to_string()),
+            amount: Uint128(5000),
+        }]);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+
+        let query_msg = QueryMsg::Minters {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "Init failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: QueryAnswer = from_binary(&query_result.unwrap()).unwrap();
+        match query_answer {
+            QueryAnswer::Minters { minters } => {
+                assert_eq!(minters, vec![]);
+            }
+            _ => panic!("unexpected"),
+        }
     }
 
     #[test]

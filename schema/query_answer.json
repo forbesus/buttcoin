@@ -44,6 +44,83 @@
     {
       "type": "object",
       "required": [
+        "token_config"
+      ],
+      "properties": {
+        "token_config": {
+          "type": "object",
+          "required": [
+            "burn_enabled",
+            "deposit_enabled",
+            "mint_enabled",
+            "public_total_supply",
+            "redeem_enabled"
+          ],
+          "properties": {
+            "burn_enabled": {
+              "type": "boolean"
+            },
+            "deposit_enabled": {
+              "type": "boolean"
+            },
+            "mint_enabled": {
+              "type": "boolean"
+            },
+            "public_total_supply": {
+              "type": "boolean"
+            },
+            "redeem_enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "contract_status"
+      ],
+      "properties": {
+        "contract_status": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "$ref": "#/definitions/ContractStatusLevel"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "exchange_rate"
+      ],
+      "properties": {
+        "exchange_rate": {
+          "type": "object",
+          "required": [
+            "denom",
+            "rate"
+          ],
+          "properties": {
+            "denom": {
+              "type": "string"
+            },
+            "rate": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "allowance"
       ],
       "properties": {
@@ -173,6 +250,28 @@
           }
         }
       }
+    },
+    {
+      "type": "object",
+      "required": [
+        "minters"
+      ],
+      "properties": {
+        "minters": {
+          "type": "object",
+          "required": [
+            "minters"
+          ],
+          "properties": {
+            "minters": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/HumanAddr"
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "definitions": {
@@ -190,6 +289,14 @@
           "type": "string"
         }
       }
+    },
+    "ContractStatusLevel": {
+      "type": "string",
+      "enum": [
+        "normal_run",
+        "stop_all_but_redeems",
+        "stop_all"
+      ]
     },
     "HumanAddr": {
       "type": "string"

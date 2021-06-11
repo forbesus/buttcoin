@@ -124,6 +124,9 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     TokenInfo {},
+    TokenConfig {},
+    ContractStatus {},
+    ExchangeRate {},
     Allowance {
         owner: HumanAddr,
         spender: HumanAddr,
@@ -145,6 +148,7 @@ pub enum QueryMsg {
         page: Option<u32>,
         page_size: u32,
     },
+    Minters {},
 }
 
 impl QueryMsg {
@@ -175,6 +179,20 @@ pub enum QueryAnswer {
         decimals: u8,
         total_supply: Option<Uint128>,
     },
+    TokenConfig {
+        public_total_supply: bool,
+        deposit_enabled: bool,
+        redeem_enabled: bool,
+        mint_enabled: bool,
+        burn_enabled: bool,
+    },
+    ContractStatus {
+        status: ContractStatusLevel,
+    },
+    ExchangeRate {
+        rate: Uint128,
+        denom: String,
+    },
     Allowance {
         spender: HumanAddr,
         owner: HumanAddr,
@@ -195,6 +213,9 @@ pub enum QueryAnswer {
     ViewingKeyError {
         msg: String,
     },
+    Minters {
+        minters: Vec<HumanAddr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
@@ -207,6 +228,14 @@ pub struct CreateViewingKeyResponse {
 pub enum ResponseStatus {
     Success,
     Failure,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ContractStatusLevel {
+    NormalRun,
+    StopAllButRedeems,
+    StopAll,
 }
 
 // Take a Vec<u8> and pad it up to a multiple of `block_size`, using spaces at the end.

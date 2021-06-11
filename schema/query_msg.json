@@ -16,6 +16,39 @@
     {
       "type": "object",
       "required": [
+        "token_config"
+      ],
+      "properties": {
+        "token_config": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "contract_status"
+      ],
+      "properties": {
+        "contract_status": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "exchange_rate"
+      ],
+      "properties": {
+        "exchange_rate": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "allowance"
       ],
       "properties": {
@@ -134,6 +167,17 @@
               "minimum": 0.0
             }
           }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "minters"
+      ],
+      "properties": {
+        "minters": {
+          "type": "object"
         }
       }
     }
