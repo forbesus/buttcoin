@@ -1,6 +1,9 @@
 # Buttcoin (BUTT)
 The native token of [btn.group](https://btn.group) built on the Secret network blockchain.
 
+## Contract
+Holodeck testnet: secret1a75javymnp05egne7mq008rw3s6m3yglfaggqt
+
 ## Changes made
 
 1. Remove ability to deposit and redeem scrt tokens.
