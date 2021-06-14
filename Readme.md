@@ -42,6 +42,8 @@ Should be changed to:
 ```
 If a contract uses an allowance to send itself some tokens, the tx will appear twice in its history. Or if the sender and receiver address are the same (which snip22 does not reject) that will appear twice as well. Neither of those will happen frequently, but still best to have clean code.
 
+2. The older SNIP20 version of Increase/DecreaseAllowance has an issue where if the token owner has already set an allowance and gave it an expiration, if that expiration has passed, and they do Increase/DecreaseAllowance now, it doesn’t treat the expired allowance amount as 0, it just adds/subtracts from the old value.  This has the unfortunate side effect that the token owner might have granted an allowance a long time ago and forgot, so now they only want to give an allowance to spend 10SCRT, but actually what they are doing is making an allowance of 10 + whatever the previous expired amount is. Another issue with the old version was that if you had an allowance that had already expired, but do not specify a new expiration when increasing or decreasing, the new amount will remain expired, which wouldn’t be the user’s intent. This contract doesn’t include the fixes for either of those. When I first mentioned those to enigma late last year, they felt it wasn't critical and that it was acceptable to just make users aware. So since you are already launched, you could probably take the same stance.
+
 ## References
 1. https://github.com/enigmampc/snip20-reference-impl
 2. https://github.com/SecretFoundation/SNIPs
