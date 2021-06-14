@@ -13,7 +13,7 @@ The native token of [btn.group](https://btn.group) built on the Secret network b
 5. Remove all reference to admin.
 
 ## Current limitations/recommendations as per review by [baedrik](https://github.com/baedrik)
-1. Just an FYI, while working on a contract that builds off of snip22, I noticed a couple small bugs. One of them is in the logging of Burn transactions, so it doesn't affect your token, but one that does is in store_transfer in transaction_history.rs:
+1. Just an FYI, while working on a contract that builds off of snip22, I noticed a couple small bugs. One of them is in the logging of BurnFrom transactions, so it doesn't affect your token, but one that does is in store_transfer in transaction_history.rs:
 ```
     if owner != sender {
         append_tx(store, &tx, owner)?;
