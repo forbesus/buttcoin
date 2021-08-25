@@ -44,6 +44,29 @@ If a contract uses an allowance to send itself some tokens (sender and receiver 
 
 2. The older SNIP20 version of Increase/DecreaseAllowance has an issue where if the token owner has already set an allowance and gave it an expiration, if that expiration has passed, and they do Increase/DecreaseAllowance now, it doesn’t treat the expired allowance amount as 0, it just adds/subtracts from the old value.  This has the unfortunate side effect that the token owner might have granted an allowance a long time ago and forgot, so now they only want to give an allowance to spend 10SCRT, but actually what they are doing is making an allowance of 10 + whatever the previous expired amount is. Another issue with the old version was that if you had an allowance that had already expired, but do not specify a new expiration when increasing or decreasing, the new amount will remain expired, which wouldn’t be the user’s intent. This contract doesn’t include the fixes for either of those. When I first mentioned those to enigma, they felt it wasn't critical and that it was acceptable to just make users aware. So since you are already launched, you could probably take the same stance.
 
+## Testing locally
+```
+// 1. Run chain locally
+docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name secretdev enigmampc/secret-network-sw-dev
+
+// 2. Access container via separate terminal window
+docker exec -it secretdev /bin/bash
+
+// 3. cd into code folder
+cd code
+
+// 4. Store the contract (Specify your keyring. Mine is named test etc.)
+secretcli tx compute store buttcoin.wasm.gz --from a --gas 3000000 -y --keyring-backend test
+
+// 5. Get the contract's id
+secretcli query compute list-code
+
+// 6. Init Buttcoin 
+CODE_ID=1
+INIT='{"name": "Buttcoin", "symbol": "BUTT", "decimals": 6, "initial_balances": [{"address": "secret1tgdqsgld9js5susma8p6674eag47q6ujyza6y6", "amount": "100000000000000"}], "prng_seed": "testing"}'
+secretcli tx compute instantiate $CODE_ID "$INIT" --from a --label "Buttcoin" -y --keyring-backend test --gas 3000000 --gas-prices=3.0uscrt
+```
+
 ## References
 1. https://github.com/enigmampc/snip20-reference-impl
 2. https://github.com/SecretFoundation/SNIPs
